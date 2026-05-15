@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Run Rock Paper Scissors</title>
+  </head>
+  <body>
+    <button id="run-button">Run</button>
+    <pre id="output"></pre>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+    <script>
+      const runButton = document.getElementById("run-button");
+      const output = document.getElementById("output");
+
+      function write(text) {
+        output.textContent += text + "\n";
+      }
+
+      runButton.addEventListener("click", async () => {
+        output.textContent = "Loading Python...\n";
+        runButton.disabled = true;
+
+        try {
+          const pyodide = await loadPyodide();
+
+          pyodide.setStdout({ batched: write });
+          pyodide.setStderr({ batched: write });
+
+          pyodide.runPython(`
+import builtins
+from js import prompt
+
+def browser_input(message=""):
+    value = prompt(message)
+    if value is None:
+        return ""
+    return value
+
+builtins.input = browser_input
+          `);
+
+          const response = await fetch("rock-paper-scissors.py");
+          const pythonCode = await response.text();
+
+          output.textContent = "";
+          await pyodide.runPythonAsync(pythonCode);
+        } catch (error) {
+          write(error.message);
+        }
+
+        runButton.disabled = false;
+      });
+    </script>
+  </body>
+</html>
